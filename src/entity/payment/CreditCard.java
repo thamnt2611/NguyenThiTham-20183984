@@ -1,6 +1,9 @@
 package entity.payment;
 
-import java.sql.Timestamp;
+import entity.db.AIMSDB;
+import entity.order.OrderMedia;
+
+import java.sql.*;
 
 public class CreditCard {
 	private String cardCode;
@@ -14,5 +17,13 @@ public class CreditCard {
 		this.owner = owner;
 		this.cvvCode = cvvCode;
 		this.dateExpired = dateExpired;
+	}
+
+	public String getCardCode() {
+		return cardCode;
+	}
+
+	public String getOwner() {
+		return owner;
 	}
 }

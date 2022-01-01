@@ -63,9 +63,10 @@ public class PaymentScreenHandler extends BaseScreenHandler {
 	private TextField securityCode;
 
 	void confirmToPayOrder() throws IOException{
+		System.out.println(this.getClass());
 		String contents = "pay order";
 		PaymentController ctrl = (PaymentController) getBController();
-		Map<String, String> response = ctrl.payOrder(invoice.getAmount(), contents, cardNumber.getText(), holderName.getText(),
+		Map<String, String> response = ctrl.payOrder(invoice, contents, cardNumber.getText(), holderName.getText(),
 				expirationDate.getText(), securityCode.getText());
 
 		BaseScreenHandler resultScreen = new ResultScreenHandler(this.stage, Configs.RESULT_SCREEN_PATH, response.get("RESULT"), response.get("MESSAGE") );

@@ -4,14 +4,15 @@ import common.exception.InvalidFormInputException;
 import common.exception.ProcessInvoiceException;
 import controller.PlaceOrderController;
 import controller.PlaceRushOrderController;
+import entity.cart.CartMedia;
 import entity.invoice.Invoice;
 import entity.order.Order;
 import entity.order.OrderMedia;
 import entity.shipping.DeliveryInfo;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,9 +20,11 @@ import utils.Configs;
 import views.screen.BaseScreenHandler;
 import views.screen.invoice.InvoiceScreenHandler;
 import java.io.IOException;
+import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ResourceBundle;
 
 /**
  * form the behaviour of RushDeliveryForm
@@ -42,13 +45,16 @@ public class RushDeliveryFormHandler extends BaseScreenHandler {
 	@FXML
 	private Button confirmBtn;
 
-	private Invoice invoice;
-
 	private DeliveryInfo rushDeliveryInfo;
 
-	public RushDeliveryFormHandler(Stage stage, String screenPath, Invoice initialInvoice) throws IOException {
+	private DeliveryInfo initialDeliveryInfo;
+
+	private String expectedDateInput;
+
+	public RushDeliveryFormHandler(Stage stage, String screenPath, DeliveryInfo initialDeliveryInfo) throws IOException {
 		super(stage, screenPath);
-		this.invoice = initialInvoice;
+		this.initialDeliveryInfo = initialDeliveryInfo;
+		this.setBController(new PlaceRushOrderController());
 		setDefaultInfo();
 		confirmBtn.setOnMouseClicked(e -> {
 			try {
@@ -62,7 +68,7 @@ public class RushDeliveryFormHandler extends BaseScreenHandler {
 			@Override
 			public void handle(ActionEvent actionEvent) {
 				LocalDate date = expectedDeliveryDate.getValue();
-				rushDeliveryInfo.setExpectedDeliveryDate(date.toString());
+				expectedDateInput = date.toString();
 				System.out.println(date.toString());
 			}
 		});
@@ -70,21 +76,15 @@ public class RushDeliveryFormHandler extends BaseScreenHandler {
 
 
 	public void setDefaultInfo() {
-		rushDeliveryInfo = new DeliveryInfo();
-		DeliveryInfo initialDeliveryInfo = invoice.getOrder().getNormalDeliveryInfo();
-		rushDeliveryInfo.setProvince(initialDeliveryInfo.getProvince());
-		rushDeliveryInfo.setReceiverFullName(initialDeliveryInfo.getReceiverFullName());
-		rushDeliveryInfo.setPhoneNumber(initialDeliveryInfo.getPhoneNumber());
-		rushDeliveryInfo.setType(DeliveryInfo.RUSH_TYPE);
-
 		this.address.setText(initialDeliveryInfo.getAddress());
 		// load order item that support rush delivery
-		PlaceRushOrderController controller = (PlaceRushOrderController) getBController();
-		List<OrderMedia> rushMedias = controller.getSupportRushMedias(invoice.getOrder());
-		for (OrderMedia orderMedia : rushMedias){
+		PlaceRushOrderController controller = (PlaceRushOrderController) this.getBController();
+		List<CartMedia> medias = controller.getListCartMedia();
+		List<CartMedia> rushMedias = controller.getSupportRushMedia(medias);
+		for (CartMedia cartMedia : rushMedias){
 			try {
-				MediaRushScreenHandler mis = new MediaRushScreenHandler(Configs.MEDIA_RUSH_PATH);
-				mis.setOrderMedia(orderMedia);
+				MediaRushHandler mis = new MediaRushHandler(Configs.MEDIA_RUSH_PATH);
+				mis.setOrderMedia(cartMedia);
 				vboxItems.getChildren().add(mis.getContent());
 			} catch (IOException | SQLException e) {
 				System.err.println("errors: " + e.getMessage());
@@ -100,29 +100,25 @@ public class RushDeliveryFormHandler extends BaseScreenHandler {
 	 * @throws IOException
 	 */
 	public void confirmRushDelivery() throws IOException {
-		rushDeliveryInfo.setAddress(address.getText());
-		rushDeliveryInfo.setDeliveryInstruction(deliveryInstruction.getText());
+		rushDeliveryInfo = new DeliveryInfo(initialDeliveryInfo.getReceiverFullName(),
+				initialDeliveryInfo.getPhoneNumber(),
+				initialDeliveryInfo.getProvince(),
+				address.getText(),
+				deliveryInstruction.getText(),
+				initialDeliveryInfo.getType());
+		rushDeliveryInfo.setExpectedDate(expectedDateInput);
 		PlaceRushOrderController controller = (PlaceRushOrderController) getBController();
 		try {
 			controller.validateRushDeliveryForm(rushDeliveryInfo);
-			invoice.getOrder().setRushDeliveryInfo(rushDeliveryInfo);
-			for(OrderMedia orderMedia : invoice.getOrder().getlstOrderMedia()){
-				if(orderMedia.getMedia().doSupportRushDelivery()){
-					orderMedia.setDeliveryType(DeliveryInfo.RUSH_TYPE);
-				}
-				else{
-					orderMedia.setDeliveryType(DeliveryInfo.NORMAL_TYPE);
-				}
-			}
-			int shippingFees = PlaceOrderController.calculateShippingFee(invoice.getOrder());
-			invoice.getOrder().setShippingFees(shippingFees);
-			showInvoiceScreen();
+			Order order = controller.createOrder(initialDeliveryInfo, rushDeliveryInfo);
+			Invoice invoice = controller.createInvoiceForOrder(order);
+			showInvoiceScreen(invoice);
 		} catch (InvalidFormInputException e) {
 			showDialog(e.getMessage());
 		}
 	}
 
-	private void showInvoiceScreen() throws IOException {
+	private void showInvoiceScreen(Invoice invoice) throws IOException {
 		BaseScreenHandler InvoiceScreenHandler = new InvoiceScreenHandler(this.stage, Configs.INVOICE_SCREEN_PATH, invoice);
 		InvoiceScreenHandler.setPreviousScreen(this);
 		InvoiceScreenHandler.setHomeScreenHandler(homeScreenHandler);

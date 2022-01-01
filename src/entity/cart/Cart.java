@@ -21,10 +21,6 @@ public class Cart {
         lstCartMedia = new ArrayList<>();
     }
 
-    public void addCartMedia(CartMedia cm){
-        lstCartMedia.add(cm);
-    }
-
     public void removeCartMedia(CartMedia cm){
         lstCartMedia.remove(cm);
     }
@@ -72,5 +68,4 @@ public class Cart {
         }
         return null;
     }
-
 }

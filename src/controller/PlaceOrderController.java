@@ -8,12 +8,12 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import common.exception.NotSatisfiedRushConditionException;
 import entity.cart.Cart;
 import entity.cart.CartMedia;
 import common.exception.InvalidDeliveryInfoException;
 import entity.invoice.Invoice;
-import entity.order.Order;
-import entity.order.OrderMedia;
+import entity.order.*;
 import entity.shipping.DeliveryInfo;
 import utils.Configs;
 import views.screen.popup.PopupScreen;
@@ -34,44 +34,75 @@ public class PlaceOrderController extends BaseController{
      * This method checks the availability of product when user click PlaceOrder button
      * @throws SQLException
      */
-    public void placeOrder() throws SQLException{
+    public void checkCartAvailability() throws SQLException{
         Cart.getCart().checkAvailabilityOfProduct();
     }
 
-    /**
-     * This method creates the new Order based on the Cart
-     * @return Order
-     * @throws SQLException
-     */
-    public Order createOrder() throws SQLException{
-        Order order = new Order();
-        for (Object object : Cart.getCart().getListMedia()) {
-            CartMedia cartMedia = (CartMedia) object;
-            OrderMedia orderMedia = new OrderMedia(cartMedia.getMedia(), 
-                                                   cartMedia.getQuantity(),
-                                                   "Not Set",
-                                                   cartMedia.getPrice());    
-            order.getlstOrderMedia().add(orderMedia);
-        }
-        return order;
+    public Invoice createInvoiceForOrder(Order order){
+        return new Invoice(order);
     }
 
     /**
-     * This method creates the new Invoice based on order
-     * @param order
-     * @return Invoice
+     * check if the order being processed satisfies rush condition
+     * @param  - the order being processed
+     * @returns boolean - true if order satisfies and false for the other case
+     * @param
+     * @throw NotSatisfiedRushConditionException
      */
-    public Invoice createInvoice(Order order) {
-        return new Invoice(order);
+    public void checkRushOrderCondition(List<CartMedia> cartMediaList, DeliveryInfo initialDeliveryInfo) {
+        if(!checkRushDeliveryInfoCondition(initialDeliveryInfo)){
+            throw new NotSatisfiedRushConditionException("We do not support rush delivery to this delivery address");
+        }
+        if(!doesContainRushMedia(cartMediaList)){
+            throw new NotSatisfiedRushConditionException("Your order does not contain any item supporting rush delivery");
+        }
     }
-    
+
+    /**
+     * check if order has any item that supports rush delivery
+     * @param cartMediaList
+     * @return
+     */
+    protected boolean doesContainRushMedia(List<CartMedia> cartMediaList){
+        for(CartMedia o : cartMediaList){
+            if(o.getMedia().doSupportRushDelivery()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if delivery information satisfies rush condition, i.e province is "Hà Nội"
+     * @param info
+     * @return
+     */
+    protected boolean checkRushDeliveryInfoCondition(DeliveryInfo info) {
+        if(info.getProvince().equals("Hà Nội")) return true;
+        return false;
+    }
+
+    /**
+     * Create Normal Order for current cart and delivery info
+     * @param initialDeliveryInfo
+     * @return
+     */
+    public Order createOrder(DeliveryInfo initialDeliveryInfo){
+        List<CartMedia> cartMediaList = this.getListCartMedia();
+        List<OrderMedia> orderMediaList = new ArrayList<>();
+        for(CartMedia cartMedia : cartMediaList){
+            OrderMedia o = new OrderMedia(cartMedia, DeliveryInfo.NORMAL_TYPE);
+            orderMediaList.add(o);
+        }
+        Order order;
+        order = new NormalOrder(orderMediaList, initialDeliveryInfo);
+        return order;
+    }
     /**
    * The method validates the info
    * @param info
    * @throws InterruptedException
    * @throws IOException
    */
-    public static void validateDeliveryInfo(DeliveryInfo info) throws InterruptedException, IOException{
+    public void validateDeliveryInfo(DeliveryInfo info){
         StringBuilder message = new StringBuilder();
         message.append("Please enter valid value for ");
         boolean isValid = true;
@@ -94,7 +125,7 @@ public class PlaceOrderController extends BaseController{
         if(!isValid) throw new InvalidDeliveryInfoException(message.toString());
     }
     
-    public static boolean validatePhoneNumber(String phoneNumber) {
+    protected boolean validatePhoneNumber(String phoneNumber) {
         if(phoneNumber == null) return false;
     	if(!phoneNumber.startsWith("0")) return false;
     	if(phoneNumber.strip().length()!=10) return false;
@@ -103,7 +134,7 @@ public class PlaceOrderController extends BaseController{
     	return true;
     }
     
-    public static boolean validateName(String name) {
+    protected boolean validateName(String name) {
         if(name == null) return false;
         name = Normalizer.normalize(name, Normalizer.Form.NFKD).strip();
         name = name.replaceAll("\\p{M}", "").replaceAll("đ", "d").replaceAll("Đ", "D");
@@ -117,7 +148,7 @@ public class PlaceOrderController extends BaseController{
         return false;
     }
     
-    public static boolean validateAddress(String address) {
+    protected boolean validateAddress(String address) {
         if(address == null) return false;
         address = Normalizer.normalize(address, Normalizer.Form.NFKD);
         address = address.replaceAll("\\p{M}", "").replaceAll("đ", "d").replaceAll("Đ", "D");
@@ -138,24 +169,12 @@ public class PlaceOrderController extends BaseController{
      * @param province
      * @return
      */
-    public static boolean validateProvince(String province) {
+    protected boolean validateProvince(String province) {
         if(province == null) return false;
         return province_set.contains(province);
     }
-    
 
-    /**
-     * This method calculates the shipping fees of order
-     * @param order
-     * @return shippingFee
-     */
-    public static int calculateShippingFee(Order order){
-        Random rand = new Random();
-        int fees = (int)( ( (rand.nextFloat()*10)/100 ) * order.getAmount() );
-        LOGGER.info("Order Amount: " + order.getAmount() + " -- Shipping Fees: " + fees);
-        if(order.getType() == Order.RUSH || order.getType() == Order.RUSH_AND_NORMAL){
-            fees += 10000;
-        }
-        return fees;
+    public int calculateShippingFee(Order order){
+        return order.getShippingFee();
     }
 }

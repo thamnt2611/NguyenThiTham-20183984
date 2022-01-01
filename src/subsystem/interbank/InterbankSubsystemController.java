@@ -18,8 +18,8 @@ import utils.Utils;
 
 public class InterbankSubsystemController {
 
-	private static final String PUBLIC_KEY = "AQzdE8O/fR8=";
-	private static final String SECRET_KEY = "BUXj/7/gHHI=";
+	private static final String PUBLIC_KEY = "BG27oFKhwgQ=";
+	private static final String SECRET_KEY = "BVHgnb5B4WQ=";
 	private static final String PAY_COMMAND = "pay";
 	private static final String VERSION = "1.0.0";
 
@@ -34,8 +34,9 @@ public class InterbankSubsystemController {
 	}
 
 	public PaymentTransaction payOrder(CreditCard card, int amount, String contents) {
+		System.out.println(this.getClass());
+		System.out.println(contents);
 		Map<String, Object> transaction = new MyMap();
-
 		try {
 			transaction.putAll(MyMap.toMyMap(card));
 		} catch (IllegalArgumentException | IllegalAccessException e) {
@@ -97,4 +98,10 @@ public class InterbankSubsystemController {
 		return trans;
 	}
 
+
+	public static void main(String[] args) {
+		CreditCard card = new CreditCard("kscq1_group11_2021", "Group 11", 298, "1125");
+		InterbankSubsystemController ctrl = new InterbankSubsystemController();
+		ctrl.payOrder(card, 12, "pay order");
+	}
 }
