@@ -1,3 +1,8 @@
+**Báo cáo Lab05 ở file : GoodDesign-DesignPrinciples.docx"
+
+
+
+
 Cách refactoring có trong file word: refactoring.docx
 (Project tạo bằng Inteliji)
 
