@@ -6,11 +6,12 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.ResourceBundle;
 
-import com.sun.jdi.ObjectReference;
 import common.exception.NotSatisfiedRushConditionException;
+import controller.BaseController;
 import controller.PlaceOrderController;
 import common.exception.InvalidDeliveryInfoException;
 import controller.PlaceRushOrderController;
+import entity.cart.CartMedia;
 import entity.invoice.Invoice;
 import entity.order.Order;
 import entity.order.OrderMedia;
@@ -30,7 +31,7 @@ import utils.Configs;
 import views.screen.BaseScreenHandler;
 import views.screen.invoice.InvoiceScreenHandler;
 
-public class ShippingScreenHandler extends BaseScreenHandler implements Initializable {
+public class DeliveryFormHandler extends BaseScreenHandler implements Initializable {
 
 	@FXML
 	private Label screenTitle;
@@ -59,12 +60,10 @@ public class ShippingScreenHandler extends BaseScreenHandler implements Initiali
 	@FXML
 	private RadioButton rushDeliveryRadioBtn;
 
-
 	private Order order;
 
-	public ShippingScreenHandler(Stage stage, String screenPath, Order order) throws IOException {
+	public DeliveryFormHandler(Stage stage, String screenPath) throws IOException {
 		super(stage, screenPath);
-		this.order = order;
 	}
 
 	@Override
@@ -83,57 +82,60 @@ public class ShippingScreenHandler extends BaseScreenHandler implements Initiali
 	@FXML
 	void submitDeliveryInfo(MouseEvent event) throws IOException, InterruptedException, SQLException {
 		// add info to messages
-		DeliveryInfo messages = new DeliveryInfo(
+		RadioButton selectedBtn = (RadioButton) deliveryTypeGroup.getSelectedToggle();
+		if(selectedBtn.getText().equals(new String("Normal"))){
+			handleNormalSubmit();
+		}
+		else{
+			handleRushSubmit();
+		}
+	}
+
+	private void handleRushSubmit() throws IOException {
+		DeliveryInfo deliveryInfo = new DeliveryInfo(
 				name.getText(),
 				phone.getText(),
 				province.getValue(),
 				address.getText(),
-				instructions.getText());
-
-		RadioButton selectedBtn = (RadioButton) deliveryTypeGroup.getSelectedToggle();
-		order.setNormalDeliveryInfo(messages);
-		if(selectedBtn.getText().equals(new String("Normal"))){
-			try{
-				PlaceOrderController.validateDeliveryInfo(messages);
-				messages.setType(DeliveryInfo.NORMAL_TYPE);
-				order.setType(Order.NORMAL);
-				// calculate shipping fees
-				int shippingFees = getBController().calculateShippingFee(order);
-				order.setShippingFees(shippingFees);
-				// create invoice screen
-				Invoice invoice = getBController().createInvoice(order);
-				showInvoiceScreen(invoice);
-			}catch (InvalidDeliveryInfoException e){
-				showDialog(e.getMessage());
-			}
+				instructions.getText(),
+				DeliveryInfo.RUSH_TYPE);
+		try {
+			PlaceOrderController controller = getBController();
+			controller.validateDeliveryInfo(deliveryInfo);
+			List<CartMedia> cartMediaList = getBController().getListCartMedia();
+			controller.checkRushOrderCondition(cartMediaList, deliveryInfo);
+			showRushDeliveryForm(deliveryInfo);
 		}
-		else{
-			// create rush delivery screen
-			try {
-				PlaceRushOrderController.checkRushOrderCondition(order);
-				messages.setType(DeliveryInfo.RUSH_TYPE);
-				List<OrderMedia> rushMedias = PlaceRushOrderController.getSupportRushMedias(order);
-				if(rushMedias.size() == order.getlstOrderMedia().size()){
-					order.setType(Order.RUSH);
-				}
-				else{
-					order.setType(Order.RUSH_AND_NORMAL);
-				}
-				Invoice invoice = getBController().createInvoice(order);
-				showRushDeliveryForm(invoice);
-			}
-			catch (NotSatisfiedRushConditionException e){
-				showDialog(e.getMessage());
-			}
+		catch (NotSatisfiedRushConditionException |  InvalidDeliveryInfoException e){
+			showDialog(e.getMessage());
 		}
 	}
 
-	private void showRushDeliveryForm(Invoice invoice) throws IOException {
-		BaseScreenHandler RushDeliveryFormHandler = new RushDeliveryFormHandler(this.stage, Configs.RUSH_DELIVERY_FORM_PATH, invoice);
+	private void handleNormalSubmit() throws InterruptedException, IOException {
+		DeliveryInfo deliveryInfo = new DeliveryInfo(
+				name.getText(),
+				phone.getText(),
+				province.getValue(),
+				address.getText(),
+				instructions.getText(),
+				DeliveryInfo.NORMAL_TYPE);
+		try{
+			PlaceOrderController controller = getBController();
+			controller.validateDeliveryInfo(deliveryInfo);
+			// create invoice screen
+			Order order = controller.createOrder(deliveryInfo);
+			Invoice invoice = controller.createInvoiceForOrder(order);
+			showInvoiceScreen(invoice);
+		}catch (InvalidDeliveryInfoException e){
+			showDialog(e.getMessage());
+		}
+	}
+
+	private void showRushDeliveryForm(DeliveryInfo initialDeliveryInfo) throws IOException {
+		BaseScreenHandler RushDeliveryFormHandler = new RushDeliveryFormHandler(this.stage, Configs.RUSH_DELIVERY_FORM_PATH, initialDeliveryInfo);
 		RushDeliveryFormHandler.setPreviousScreen(this);
 		RushDeliveryFormHandler.setHomeScreenHandler(homeScreenHandler);
 		RushDeliveryFormHandler.setScreenTitle("Rush Delivery Screen");
-		RushDeliveryFormHandler.setBController(new PlaceRushOrderController());
 		RushDeliveryFormHandler.show();
 	}
 

@@ -49,7 +49,6 @@ public class CartMedia {
             + ", quantity='" + quantity + "'" 
             + "}";
     }
-
 }
 
     

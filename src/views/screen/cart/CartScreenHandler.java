@@ -11,6 +11,7 @@ import common.exception.MediaNotAvailableException;
 import common.exception.PlaceOrderException;
 import controller.PlaceOrderController;
 import controller.ViewCartController;
+import entity.cart.Cart;
 import entity.cart.CartMedia;
 import entity.order.Order;
 import javafx.fxml.FXML;
@@ -24,7 +25,7 @@ import utils.Configs;
 import utils.Utils;
 import views.screen.BaseScreenHandler;
 import views.screen.popup.PopupScreen;
-import views.screen.shipping.ShippingScreenHandler;
+import views.screen.shipping.DeliveryFormHandler;
 
 public class CartScreenHandler extends BaseScreenHandler {
 
@@ -77,7 +78,6 @@ public class CartScreenHandler extends BaseScreenHandler {
 				exp.printStackTrace();
 				throw new PlaceOrderException(Arrays.toString(exp.getStackTrace()).replaceAll(", ", "\n"));
 			}
-			
 		});
 	}
 
@@ -109,22 +109,18 @@ public class CartScreenHandler extends BaseScreenHandler {
 				PopupScreen.error("You don't have anything to place");
 				return;
 			}
-
-			placeOrderController.placeOrder();
+			placeOrderController.checkCartAvailability();
 			
 			// display available media
 			displayCartWithMediaAvailability();
 
-			// create order
-			Order order = placeOrderController.createOrder();
-
 			// display shipping form
-			ShippingScreenHandler ShippingScreenHandler = new ShippingScreenHandler(this.stage, Configs.SHIPPING_SCREEN_PATH, order);
-			ShippingScreenHandler.setPreviousScreen(this);
-			ShippingScreenHandler.setHomeScreenHandler(homeScreenHandler);
-			ShippingScreenHandler.setScreenTitle("Shipping Screen");
-			ShippingScreenHandler.setBController(placeOrderController);
-			ShippingScreenHandler.show();
+			DeliveryFormHandler DeliveryFormHandler = new DeliveryFormHandler(this.stage, Configs.SHIPPING_SCREEN_PATH);
+			DeliveryFormHandler.setPreviousScreen(this);
+			DeliveryFormHandler.setHomeScreenHandler(homeScreenHandler);
+			DeliveryFormHandler.setScreenTitle("Shipping Screen");
+			DeliveryFormHandler.setBController(placeOrderController);
+			DeliveryFormHandler.show();
 
 		} catch (MediaNotAvailableException e) {
 			// if some media are not available then display cart and break usecase Place Order

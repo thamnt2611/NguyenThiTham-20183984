@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
@@ -17,13 +19,12 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import entity.payment.CreditCard;
-import entity.payment.PaymentTransaction;
-
 public class API {
 
 	public static DateFormat DATE_FORMATER = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static Logger LOGGER = Utils.getLogger(Utils.class.getName());
+
+
 
 	public static String get(String url, String token) throws Exception {
 		LOGGER.info("Request URL: " + url + "\n");
@@ -37,12 +38,12 @@ public class API {
 
 	public static String post(String url, String data
 			, String token
-	) throws IOException {
-		allowMethods("PATCH");
+	) throws IOException, InterruptedException {
 		String payload = data;
+		allowMethods("PATCH");
+
 		LOGGER.info("Request Info:\nRequest URL: " + url + "\n" + "Payload Data: " + payload + "\n");
 		HttpURLConnection conn = getHttpURLConnection(url, token, "PATCH");
-
 		sendData(payload, conn);
 
 		String response = getReturnData(conn);
@@ -55,9 +56,11 @@ public class API {
 			Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
 			methodsField.setAccessible(true);
 
-			Field modifiersField = Field.class.getDeclaredField("modifiers");
-			modifiersField.setAccessible(true);
-			modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
+			VarHandle MODIFIERS = MethodHandles.privateLookupIn(Field.class, MethodHandles.lookup()).findVarHandle(Field.class, "modifiers", int.class);
+			int mods = methodsField.getModifiers();
+			if(Modifier.isFinal(mods)){
+				MODIFIERS.set(methodsField, mods & ~Modifier.FINAL);
+			}
 
 			String[] oldMethods = (String[]) methodsField.get(null);
 			Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));

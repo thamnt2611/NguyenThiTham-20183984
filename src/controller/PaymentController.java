@@ -1,5 +1,6 @@
 package controller;
 
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Hashtable;
 import java.util.Map;
@@ -8,6 +9,7 @@ import common.exception.InvalidCardException;
 import common.exception.PaymentException;
 import common.exception.UnrecognizedException;
 import entity.cart.Cart;
+import entity.invoice.Invoice;
 import entity.payment.CreditCard;
 import entity.payment.PaymentTransaction;
 import subsystem.InterbankInterface;
@@ -45,8 +47,7 @@ public class PaymentController extends BaseController {
 	 *                              in the expected format
 	 */
 	private String getExpirationDate(String date) throws InvalidCardException {
-		String[] strs = date.split("/");
-		if (strs.length != 2) {
+		if (date.length() != 4) {
 			throw new InvalidCardException();
 		}
 
@@ -55,12 +56,12 @@ public class PaymentController extends BaseController {
 		int year = -1;
 
 		try {
-			month = Integer.parseInt(strs[0]);
-			year = Integer.parseInt(strs[1]);
+			month = Integer.parseInt(date.substring(0, 2));
+			year = Integer.parseInt(date.substring(2, 4));
 			if (month < 1 || month > 12 || year < Calendar.getInstance().get(Calendar.YEAR) % 100 || year > 100) {
 				throw new InvalidCardException();
 			}
-			expirationDate = strs[0] + strs[1];
+			expirationDate = date;
 
 		} catch (Exception ex) {
 			throw new InvalidCardException();
@@ -72,7 +73,7 @@ public class PaymentController extends BaseController {
 	/**
 	 * Pay order, and then return the result with a message.
 	 * 
-	 * @param amount         - the amount to pay
+	 * @param invoice         - information of order
 	 * @param contents       - the transaction contents
 	 * @param cardNumber     - the card number
 	 * @param cardHolderName - the card holder name
@@ -81,8 +82,9 @@ public class PaymentController extends BaseController {
 	 * @return {@link java.util.Map Map} represent the payment result with a
 	 *         message.
 	 */
-	public Map<String, String> payOrder(int amount, String contents, String cardNumber, String cardHolderName,
-			String expirationDate, String securityCode) {
+	public Map<String, String> payOrder(Invoice invoice, String contents, String cardNumber, String cardHolderName,
+										String expirationDate, String securityCode) {
+		System.out.println(this.getClass());
 		Map<String, String> result = new Hashtable<String, String>();
 		result.put("RESULT", "PAYMENT FAILED!");
 		try {
@@ -90,11 +92,11 @@ public class PaymentController extends BaseController {
 					getExpirationDate(expirationDate));
 
 			this.interbank = new InterbankSubsystem();
-			PaymentTransaction transaction = interbank.payOrder(card, amount, contents);
-
+			PaymentTransaction transaction = interbank.payOrder(card, invoice.getTotal(), contents);
+			transaction.saveTransactionHistory(invoice.getOrder());
 			result.put("RESULT", "PAYMENT SUCCESSFUL!");
 			result.put("MESSAGE", "You have succesffully paid the order!");
-		} catch (PaymentException | UnrecognizedException ex) {
+		} catch (PaymentException | UnrecognizedException | SQLException ex) {
 			result.put("MESSAGE", ex.getMessage());
 		}
 		return result;

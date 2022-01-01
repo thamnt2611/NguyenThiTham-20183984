@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="768.0" prefWidth="1366.0" style="-fx-background-color: white;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane prefHeight="768.0" prefWidth="1366.0" style="-fx-background-color: white;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <Label fx:id="pageTitle" layoutX="70.0" layoutY="1.0" prefHeight="96.0" prefWidth="216.0" text="Payment" textAlignment="CENTER" textFill="#5091e6">
          <font>
@@ -43,7 +43,7 @@
                   <Font name="Calibri" size="24.0" />
                </font>
             </Label>
-            <TextField fx:id="cardNumber" text="118609_group1_2020">
+            <TextField fx:id="cardNumber" text="kscq1_group11_2021">
                <font>
                   <Font name="Calibri" size="24.0" />
                </font>
@@ -53,7 +53,7 @@
                   <Font name="Calibri" size="24.0" />
                </font>
             </Label>
-            <TextField fx:id="holderName" text="Group 1">
+            <TextField fx:id="holderName" text="Group 11">
                <font>
                   <Font name="Calibri" size="24.0" />
                </font>
@@ -63,7 +63,7 @@
                   <Font name="Calibri" size="24.0" />
                </font>
             </Label>
-            <TextField fx:id="expirationDate" text="11/25">
+            <TextField fx:id="expirationDate" text="1125">
                <font>
                   <Font name="Calibri" size="24.0" />
                </font>
@@ -73,7 +73,7 @@
                   <Font name="Calibri" size="24.0" />
                </font>
             </Label>
-            <TextField fx:id="securityCode" text="185">
+            <TextField fx:id="securityCode" text="298">
                <font>
                   <Font name="Calibri" size="24.0" />
                </font>

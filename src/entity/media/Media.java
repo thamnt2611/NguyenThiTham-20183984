@@ -16,9 +16,7 @@ import utils.Utils;
  * @author nguyenlm
  */
 public class Media {
-
     private static Logger LOGGER = Utils.getLogger(Media.class.getName());
-
     protected Statement stm;
     protected int id;
     protected String title;
@@ -35,7 +33,7 @@ public class Media {
         stm = conn.createStatement();
     }
 
-    public Media (int id, String title, String category, int price, int quantity, String type) throws SQLException{
+    public Media (int id, String title, String category, int price, int quantity, String type){
         this.id = id;
         this.title = title;
         this.category = category;
@@ -179,6 +177,5 @@ public class Media {
             ", type='" + type + "'" +
             ", imageURL='" + imageURL + "'" +
             "}";
-    }    
-
+    }
 }

@@ -35,6 +35,7 @@ public class InterbankSubsystem implements InterbankInterface {
 	 *      java.lang.String)
 	 */
 	public PaymentTransaction payOrder(CreditCard card, int amount, String contents) {
+		System.out.println(this.getClass());
 		PaymentTransaction transaction = ctrl.payOrder(card, amount, contents);
 		return transaction;
 	}

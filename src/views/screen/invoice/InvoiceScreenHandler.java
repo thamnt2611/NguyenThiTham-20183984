@@ -2,18 +2,15 @@ package views.screen.invoice;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.logging.Logger;
 
 import common.exception.ProcessInvoiceException;
 import controller.PaymentController;
 import entity.invoice.Invoice;
-import entity.order.Order;
 import entity.order.OrderMedia;
 import entity.shipping.DeliveryInfo;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -65,32 +62,29 @@ public class InvoiceScreenHandler extends BaseScreenHandler {
 	}
 
 	private void setInvoiceInfo(){
-		DeliveryInfo deliveryInfo = invoice.getOrder().getNormalDeliveryInfo();
+		DeliveryInfo deliveryInfo = invoice.getOrder().getDeliveryInfo();
 		name.setText(deliveryInfo.getReceiverFullName());
 		province.setText(deliveryInfo.getProvince());
 		instructions.setText(deliveryInfo.getDeliveryInstruction());
 		address.setText(deliveryInfo.getAddress());
-		subtotal.setText(Utils.getCurrencyFormat(invoice.getOrder().getAmount()));
-		shippingFees.setText(Utils.getCurrencyFormat(invoice.getOrder().getShippingFees()));
-		int amount = invoice.getOrder().getAmount() + invoice.getOrder().getShippingFees();
+		subtotal.setText(Utils.getCurrencyFormat(invoice.getSubtotal()));
+		shippingFees.setText(Utils.getCurrencyFormat(invoice.getShippingFee()));
+		int amount = invoice.getSubtotal() + invoice.getShippingFee();
 		total.setText(Utils.getCurrencyFormat(amount));
-		invoice.setAmount(amount);
 		invoice.getOrder().getlstOrderMedia().forEach(orderMedia -> {
 			try {
-				MediaInvoiceScreenHandler mis = new MediaInvoiceScreenHandler(Configs.INVOICE_MEDIA_SCREEN_PATH);
+				MediaInvoiceHandler mis = new MediaInvoiceHandler(Configs.INVOICE_MEDIA_SCREEN_PATH);
 				mis.setOrderMedia((OrderMedia) orderMedia);
 				vboxItems.getChildren().add(mis.getContent());
 			} catch (IOException | SQLException e) {
 				System.err.println("errors: " + e.getMessage());
 				throw new ProcessInvoiceException(e.getMessage());
 			}
-			
 		});
-
 	}
 
 	@FXML
-	void confirmInvoice(MouseEvent event) throws IOException {
+	public void confirmInvoice(MouseEvent event) throws IOException {
 		BaseScreenHandler paymentScreen = new PaymentScreenHandler(this.stage, Configs.PAYMENT_SCREEN_PATH, invoice);
 		paymentScreen.setBController(new PaymentController());
 		paymentScreen.setPreviousScreen(this);

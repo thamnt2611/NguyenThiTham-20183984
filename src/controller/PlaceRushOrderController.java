@@ -2,9 +2,11 @@ package controller;
 
 import common.exception.InvalidFormInputException;
 import common.exception.NotSatisfiedRushConditionException;
-import entity.invoice.Invoice;
+import entity.cart.CartMedia;
+import entity.order.MixedOrder;
 import entity.order.Order;
 import entity.order.OrderMedia;
+import entity.order.RushOrder;
 import entity.shipping.DeliveryInfo;
 
 import java.time.LocalDate;
@@ -19,20 +21,50 @@ import java.util.List;
  *
  * @author thamnt
  */
-public class PlaceRushOrderController extends BaseController {
+public class PlaceRushOrderController extends PlaceOrderController {
 
 	/**
 	 * get all items that support rush delivery in the order being processed
 	 * @returns List\<OrderMedia\>
 	 */
-	public static List<OrderMedia> getSupportRushMedias(Order order) {
-		List<OrderMedia> rushMedias = new ArrayList<>();
-		for(OrderMedia orderMedia : order.getlstOrderMedia()){
-			if(orderMedia.getMedia().doSupportRushDelivery()){
-				rushMedias.add(orderMedia);
+	public List<CartMedia> getSupportRushMedia(List<CartMedia> cartMediaList) {
+		List<CartMedia> rushMedias = new ArrayList<>();
+		for(CartMedia cartMedia : cartMediaList){
+			if(cartMedia.getMedia().doSupportRushDelivery()){
+				rushMedias.add(cartMedia);
 			}
 		}
 		return rushMedias;
+	}
+
+	/**
+	 * Create Rush Order for current cart
+	 * @param initialDeliveryInfo
+	 * @param rushDeliveryInfo
+	 * @return
+	 */
+	public Order createOrder(DeliveryInfo initialDeliveryInfo, DeliveryInfo rushDeliveryInfo){
+		List<CartMedia> cartMediaList = this.getListCartMedia();
+		List<CartMedia> supportRushMedias = getSupportRushMedia(cartMediaList);
+		List<OrderMedia> orderMediaList = new ArrayList<>();
+		for(CartMedia cartMedia : cartMediaList){
+			if(cartMedia.getMedia().doSupportRushDelivery()){
+				OrderMedia o = new OrderMedia(cartMedia, DeliveryInfo.RUSH_TYPE);
+				orderMediaList.add(o);
+			}
+			else{
+				OrderMedia o = new OrderMedia(cartMedia, DeliveryInfo.NORMAL_TYPE);
+				orderMediaList.add(o);
+			}
+		}
+		Order order;
+		if(orderMediaList.size() == supportRushMedias.size()){
+			order = new RushOrder(orderMediaList, rushDeliveryInfo);
+		}
+		else{
+			order = new MixedOrder(orderMediaList, initialDeliveryInfo, rushDeliveryInfo);
+		}
+		return order;
 	}
 
 	/**
@@ -44,8 +76,8 @@ public class PlaceRushOrderController extends BaseController {
 	 */
 	public void validateRushDeliveryForm(DeliveryInfo info){
 		String address = info.getAddress();
-		String dateInput = info.getExpectedDeliveryDate();
-		if(!PlaceOrderController.validateAddress(address)){
+		String dateInput = info.getExpectedDate();
+		if(!validateAddress(address)){
 			throw new InvalidFormInputException("Please enter valid address");
 		}
 		if(!validateDateInput(dateInput)){
@@ -73,45 +105,5 @@ public class PlaceRushOrderController extends BaseController {
 		if(date.isBefore(LocalDate.now())) return false;
 
 		return true;
-	}
-
-	/**
-	 * check if the order being processed satisfies rush condition
-	 * @param order - the order being processed
-	 * @returns boolean - true if order satisfies and false for the other case
-	 * @param order
-	 * @throw NotSatisfiedRushConditionException
-	 */
-	public static void checkRushOrderCondition(Order order) {
-		DeliveryInfo initialDeliveryInfo = order.getNormalDeliveryInfo();
-		if(!checkRushDeliveryInfoCondition(initialDeliveryInfo)){
-			throw new NotSatisfiedRushConditionException("We do not support rush delivery to this delivery address");
-		}
-		if(!doesContainRushMedia(order)){
-			throw new NotSatisfiedRushConditionException("Your order does not contain any item supporting rush delivery");
-		}
-	}
-
-	/**
-	 * check if order has any item that supports rush delivery
-	 * @param order
-	 * @return
-	 */
-	public static boolean doesContainRushMedia(Order order){
-		List<OrderMedia> orderMediaList = order.getlstOrderMedia();
-		for(OrderMedia o : orderMediaList){
-			if(o.getMedia().doSupportRushDelivery()) return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Check if delivery information satisfies rush condition, i.e province is "Hà Nội"
-	 * @param info
-	 * @return
-	 */
-	public static boolean checkRushDeliveryInfoCondition(DeliveryInfo info) {
-		if(info.getProvince().equals("Hà Nội")) return true;
-		return false;
 	}
 }
